@@ -1,7 +1,6 @@
-#ifndef CONTROLLER_H
-#define CONTROLLER_H
-
+#pragma once
 #include "snake.h"
+
 
 class Controller {
  public:
@@ -11,5 +10,3 @@ class Controller {
   void ChangeDirection(Snake &snake, Snake::Direction input,
                        Snake::Direction opposite) const;
 };
-
-#endif

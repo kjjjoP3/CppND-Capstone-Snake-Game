@@ -45,125 +45,96 @@ This work is licensed under a
 [cc-by-sa-image]: https://licensebuttons.net/l/by-sa/4.0/88x31.png
 [cc-by-sa-shield]: https://img.shields.io/badge/License-CC%20BY--SA%204.0-lightgrey.svg
 
-# Snake Game
+# CPPND Capstone Project: Snake Game
 
-## Introduction
+This project is a submission for the Udacity C++ Nanodegree Capstone Project, building upon the starter code provided by Udacity. The base project was inspired by a StackOverflow post, and the game mechanics resemble the classic Snake game. This README outlines the added features, instructions for building and running the game, and explains how the rubric points are met in this project.
 
-This is a classic Snake game developed using C++ and SDL2. The game allows the player to control a snake, eat food, grow longer, and avoid obstacles. New features such as difficulty levels, high score tracking, and poison food have been added to enhance the gameplay experience.
+## Game Enhancements and Modifications
 
-## Features
+Several key features have been introduced or modified from the starter code to improve gameplay:
 
-### New Features Added:
-1. **Difficulty Levels**:
-   - The player can choose from three difficulty levels during the game:
-     - **Easy**: No walls or poison food.
-     - **Normal**: Includes walls. The snake dies if it hits the walls.
-     - **Hard**: Adds poison food with a 20% chance of spawning. Toxic food will poison the snake, making it move in the opposite direction for 5 seconds.
-   
-2. **Pause and Resume**:
-   - Press `ESC` to pause or resume the game during play.
+1. **Boundary Walls**  
+   The game now features solid boundaries on the edges, acting as walls. The snake must turn away upon contact with a wall or its own body. If a turn is not possible, the game ends. This design was inspired by the Google Snake game.
 
-3. **High Score Tracking**:
-   - The game reads and writes high scores to `highScore.txt`.
+2. **Automatic Turning**  
+   When the snake encounters its own body or a wall, it automatically attempts to turn left. If a left turn is not feasible, a right turn is attempted. The player can always override this automated behavior by providing a direction input.
 
-4. **Poison Food (Hard Level)**:
-   - At the hard level, toxic food has a 20% chance of appearing. If eaten, the snake becomes poisoned for 5 seconds, during which the snake will move in the opposite direction of the player's input.
+3. **Dynamic Speed Adjustment**  
+   Speed remains constant initially but slows down slightly as the snake’s length grows beyond 25 cells. Specifically, each time the snake grows, the speed decreases by 5% until the snake reaches 35 cells, after which the speed stays fixed. This adjustment was found to improve gameplay experience by balancing challenge and control.
 
-5. **Modal Dialog**:
-   - A modal dialog appears when the game ends, displaying the score and snake size.
+4. **Improved Visuals**  
+   The snake's body is now rendered with a clear outline to enhance visual distinction between segments.
 
-### Expected Behavior
+## Building and Running the Project
 
-- **Movement**: The snake moves according to the arrow key inputs. The snake grows longer as it eats food.
-- **Game Over**: The game ends if the snake collides with the walls or its own body.
-- **Difficulty Levels**: The difficulty affects game speed and obstacles. Higher difficulty includes walls and poison food.
-- **High Score**: The highest score is saved in the `highScore.txt` file and displayed when the game ends.
-- **Pause**: Press `ESC` to pause the game and resume it later.
-- **Poison Food**: On hard difficulty, a 20% chance exists for a toxic food to appear. If eaten, the snake moves in the opposite direction for 5 seconds.
+### Prerequisites
+- **C++ compiler** (e.g., g++)
+- **SDL2 library** for handling rendering and input (cross-platform installation instructions are provided below)
 
-## Requirements
+### Cross-Platform Installation Instructions
 
-- **C++ (C++11 or newer)**
-- **SDL2** (Simple DirectMedia Layer)
-  
-### Installing SDL2
+- **Ubuntu**: 
+  ```bash
+  sudo apt-get update
+  sudo apt-get install libsdl2-dev
 
-#### On Ubuntu (or similar Linux OS):
 
-```bash
-sudo apt-get update
-sudo apt-get install libsdl2-dev
-On Windows:
-Download SDL2 from SDL2 Download Page.
-Extract and set up SDL2 in your project as per the SDL2 documentation.
-Installation and Compilation
-To compile and run the game, follow the steps below:
+Mac:
 
+bash
+Copy code
+brew install sdl2
+Windows:
+Download and install SDL2 development libraries from SDL's official website. Follow platform-specific instructions for setup.
+
+Building and Running the Game
 Clone the repository:
 
 bash
 Copy code
-git clone [https://github.com/yourusername/snake-game.git](https://github.com/kjjjoP3/CppND-Capstone-Snake-Game)
-cd snake-game
-Compile the Game:
-
-Run the following command to compile the game:
+git clone https://github.com/kjjjoP3/CppND-Capstone-Snake-Game
+Build the project:
 
 bash
 Copy code
-g++ -o snake_game game.cpp snake.cpp renderer.cpp highscore.cpp player.cpp controller.cpp -lSDL2 -std=c++11
-Run the Game:
-
-After compilation, run the game with the command:
+mkdir build
+cd build
+cmake ..
+make
+Run the game:
 
 bash
 Copy code
-./snake_game
-The game window should appear, and you can begin playing!
-
-Code Structure
-game.cpp: Manages the overall game flow, including score tracking, difficulty levels, and game-over conditions.
-snake.cpp: Contains logic for controlling the snake’s movement, growth, and collision detection.
-renderer.cpp: Handles the rendering of the game, including drawing the snake, food, and updating the game window.
-highscore.cpp: Responsible for saving and loading the high score to/from highScore.txt.
-player.cpp: Stores information about the player, including score and size.
-controller.cpp: Handles user input and controls the snake's movement.
+./SnakeGame
+New Features and Expected Behavior
+Boundary Walls: The game does not wrap around; instead, walls act as barriers. Colliding with a wall requires a turn or ends the game if a turn is not possible.
+Automatic Turning: The snake will turn left or right as needed to avoid obstacles when possible.
+Dynamic Speed: The snake's speed decreases slightly after reaching a length of 25 cells, giving the player better control as the snake grows longer.
+Enhanced Visuals: Clear outlining improves segment visibility, helping players track the snake's path more easily.
 Rubric Points Addressed
-Functions and Control Structures:
+The following rubric items are implemented in this project. Each item is linked to specific code sections, including file names and line numbers where relevant.
 
-The project demonstrates an understanding of C++ functions and control structures.
-Files and Line Numbers:
-game.cpp, line 82: PlaceFood() function.
-snake.cpp, line 5: SetSpeed() function.
-User Input and Processing:
-
-The project accepts user input for controlling the snake and setting the snake’s speed.
-Files and Line Numbers:
-snake.cpp, line 5: SetSpeed() function allows the user to input their desired snake speed.
-Object-Oriented Programming:
-
-Classes are used to organize the game logic with appropriate access specifiers for class members.
-Files and Line Numbers:
-snake.cpp, snake.h, game.cpp, game.h: All these files use proper object-oriented principles.
-Reading and Writing of High Score:
-
-The game reads and writes the high score to highScore.txt.
-Files and Line Numbers:
-highscore.cpp, lines 10-50: Handles the reading and writing of the high score.
-Pause and Resume:
-
-The game allows the user to pause and resume the game by pressing ESC.
-Files and Line Numbers:
-game.cpp, lines 120-140: Handles pausing and resuming the game.
-Toxic Food (Hard Difficulty):
-
-In Hard mode, toxic food appears with a 20% chance, and the snake is poisoned if eaten.
-Files and Line Numbers:
-snake.cpp, lines 90-120: Logic for handling poison food and the poisoned state.
-How to Play
-Control the Snake: Use the arrow keys (Up, Down, Left, Right) to control the snake’s movement.
-Eat Food: Eat the yellow food to grow longer and increase your score.
-Avoid Collisions: The snake dies if it collides with the walls or its own body.
-Pause/Resume: Press ESC to pause the game and resume it.
-Select Difficulty: Press 1, 2, or 3 to select Easy, Normal, or Hard difficulty.
-Game Over: When the snake dies, you can view your score and the high score in the modal dialog.
+1. Functions and Control Structures
+Requirement: Demonstrate an understanding of C++ functions and control structures.
+Code Reference: See renderer.cpp at lines 78, 94, 110, and 150. Functions were added, including RenderBody, which iterates backward over a std::vector.
+2. User Input Processing
+Requirement: Accept and process user input.
+Code Reference: snake.cpp, line 195 in the new ChangeDirection function. Input handling has been expanded beyond simple directional changes.
+3. Object-Oriented Programming (OOP)
+Requirement: Use OOP techniques.
+Code Reference: New Point class introduced. In snake.h, lines 30-40, data members in the Snake class are now private with public getters/setters.
+4. Appropriate Access Specifiers
+Requirement: Use appropriate access specifiers.
+Code Reference: snake.h, lines 30-40. All data members in Snake are private, aligning with encapsulation principles.
+5. Member Initialization Lists
+Requirement: Utilize member initialization lists.
+Code Reference: Used in class constructors throughout the project.
+6. Encapsulation
+Requirement: Encapsulate behavior within classes.
+Code Reference: See Snake class in snake.h. All data members are private, providing encapsulation.
+7. Function Overloading
+Requirement: Overload functions to handle different parameters.
+Code Reference: renderer.cpp, lines 78-100, where Renderer::Direction is overloaded.
+8. References in Function Declarations
+Requirement: Use references in function declarations.
+Code Reference: Functions Renderer::RenderBlock and Renderer::RenderBody take parameters by reference (renderer.h, lines 16-21). The getter for Snake::body also returns a const reference.

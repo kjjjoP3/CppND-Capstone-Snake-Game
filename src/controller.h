@@ -1,12 +1,17 @@
-#pragma once
-#include "snake.h"
+#ifndef CONTROLLER_H
+#define CONTROLLER_H
 
+#include "snake.h"
 
 class Controller {
  public:
-  void HandleInput(bool &running, Snake &snake) const;
+  // Xử lý các sự kiện nhập liệu từ người dùng
+  void HandleInput(bool &isRunning, Snake &snake) const;
 
  private:
-  void ChangeDirection(Snake &snake, Snake::Direction input,
-                       Snake::Direction opposite) const;
+  // Thay đổi hướng của rắn với các điều kiện đối nghịch
+  void ChangeDirection(Snake &snake, Snake::Direction newDirection,
+                       Snake::Direction oppositeDirection) const;
 };
+
+#endif

@@ -9,16 +9,15 @@
 
 class Game {
  public:
-  Game(std::size_t grid_width, std::size_t grid_height);
-  void Run(Controller const &controller, Renderer &renderer,
-           std::size_t target_frame_duration);
+  Game(std::size_t gridWidth, std::size_t gridHeight);
+  void Run(const Controller &controller, Renderer &renderer,
+           std::size_t targetFrameDuration);
   int GetScore() const;
   int GetSize() const;
 
  private:
   Snake snake;
-  SDL_Point food, extraFood; // Thêm biến thức ăn phụ
-  bool hasExtraFood;
+  SDL_Point food;
 
   std::random_device dev;
   std::mt19937 engine;
@@ -27,8 +26,7 @@ class Game {
 
   int score{0};
 
-  void GenerateFood();
-  void GenerateExtraFood(); // Thức ăn phụ
+  void PlaceFood();
   void Update();
 };
 

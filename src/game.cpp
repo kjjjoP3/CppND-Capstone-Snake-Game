@@ -2,112 +2,86 @@
 #include <iostream>
 #include "SDL.h"
 
-Game::Game(std::size_t grid_width, std::size_t grid_height)
-    : snake(grid_width, grid_height),
+Game::Game(std::size_t gridWidth, std::size_t gridHeight)
+    : snake(gridWidth, gridHeight),
       engine(dev()),
-      random_w(0, static_cast<int>(grid_width - 1)),
-      random_h(0, static_cast<int>(grid_height - 1)) {
-  GenerateFood();
+      random_w(0, static_cast<int>(gridWidth - 1)),
+      random_h(0, static_cast<int>(gridHeight - 1)) {
+  PlaceFood();
 }
 
-void Game::Run(Controller const &controller, Renderer &renderer,
-               std::size_t target_frame_duration) {
-  Uint32 title_timestamp = SDL_GetTicks();
-  Uint32 frame_start;
-  Uint32 frame_end;
-  Uint32 frame_duration;
-  int frame_count = 0;
-  bool running = true;
+void Game::Run(const Controller &controller, Renderer &renderer,
+               std::size_t targetFrameDuration) {
+  Uint32 lastTitleUpdateTime = SDL_GetTicks();
+  Uint32 frameStartTime;
+  Uint32 frameEndTime;
+  Uint32 frameTime;
+  int frameCount = 0;
+  bool isRunning = true;
 
-  while (running) {
-    frame_start = SDL_GetTicks();
+  while (isRunning) {
+    frameStartTime = SDL_GetTicks();
 
-    // Vòng lặp chính gồm các bước Input, Update, Render
-    controller.HandleInput(running, snake);
+    // Main game loop: handle input, update state, render game
+    controller.HandleInput(isRunning, snake);
     Update();
-    renderer.Render(snake, food, extraFood, hasExtraFood);
+    renderer.Render(snake, food);
 
-    frame_end = SDL_GetTicks();
+    frameEndTime = SDL_GetTicks();
 
-    // Tính toán thời gian thực thi của mỗi vòng lặp
-    frame_count++;
-    frame_duration = frame_end - frame_start;
+    frameCount++;
+    frameTime = frameEndTime - frameStartTime;
 
-    // Cập nhật tiêu đề cửa sổ mỗi giây
-    if (frame_end - title_timestamp >= 1000) {
-      renderer.UpdateWindowTitle(score, frame_count);
-      frame_count = 0;
-      title_timestamp = frame_end;
+    // Update window title every second
+    if (frameEndTime - lastTitleUpdateTime >= 1000) {
+      renderer.UpdateWindowTitle(score, frameCount);
+      frameCount = 0;
+      lastTitleUpdateTime = frameEndTime;
     }
 
-    // Nếu thời gian thực thi vòng lặp nhỏ hơn thời gian khung hình mục tiêu, tạm dừng để đạt được tốc độ khung hình mong muốn.
-    if (frame_duration < target_frame_duration) {
-      SDL_Delay(target_frame_duration - frame_duration);
+    // Delay if the frame time is less than the target frame duration
+    if (frameTime < targetFrameDuration) {
+      SDL_Delay(targetFrameDuration - frameTime);
     }
   }
 }
 
-void Game::GenerateFood() {
+void Game::PlaceFood() {
   int x, y;
   while (true) {
     x = random_w(engine);
     y = random_h(engine);
-    // Đảm bảo rằng vị trí thức ăn không trùng với thân rắn
+
+    // Ensure the food is placed in an empty space
     if (!snake.SnakeCell(x, y)) {
       food.x = x;
       food.y = y;
-      break;
-    }
-  }
-  // Khởi tạo giá trị của thức ăn phụ
-  hasExtraFood = false;
-
-  // Thêm thức ăn phụ mỗi khi kích thước của rắn chia hết cho 5
-  if (snake.size % 5 == 0) {
-    GenerateExtraFood();
-  }
-}
-
-void Game::GenerateExtraFood() {
-  int x, y;
-  hasExtraFood = true;
-  while (true) {
-    x = random_w(engine);
-    y = random_h(engine);
-    // Đảm bảo rằng vị trí của thức ăn phụ không trùng với thân rắn
-    if (!snake.SnakeCell(x, y)) {
-      extraFood.x = x;
-      extraFood.y = y;
-      break;
+      return;
     }
   }
 }
 
 void Game::Update() {
-  if (!snake.alive) return;
+  if (!snake.IsAlive()) return;
 
   snake.Update();
 
-  int new_x = static_cast<int>(snake.head_x);
-  int new_y = static_cast<int>(snake.head_y);
+  int headX = static_cast<int>(snake.GetHead().x);
+  int headY = static_cast<int>(snake.GetHead().y);
 
-  // Kiểm tra xem rắn có ăn thức ăn hay không
-  if (food.x == new_x && food.y == new_y) {
+  // Check if the snake's head is on top of food
+  if (food.x == headX && food.y == headY) {
     score++;
-    GenerateFood();
-    // Tăng chiều dài và tốc độ của rắn
+    PlaceFood();
     snake.GrowBody();
-    snake.speed += 0.02;
-  }
 
-  // Kiểm tra xem rắn có ăn thức ăn phụ hay không
-  if (extraFood.x == new_x && extraFood.y == new_y && hasExtraFood) {
-    score += 5;
-    snake.GrowBody();
-    snake.speed += 0.02;
-    hasExtraFood = false;
+    // Optionally, adjust snake speed as it grows
+    if (snake.SizeInBounds(25, 35)) {
+      snake.ScaleSpeed(0.95);
+    }
   }
 }
 
 int Game::GetScore() const { return score; }
-int Game::GetSize() const { return snake.size; }
+
+int Game::GetSize() const { return snake.GetSize(); }

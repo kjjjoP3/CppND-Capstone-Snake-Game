@@ -44,3 +44,51 @@ This work is licensed under a
 [cc-by-sa]: http://creativecommons.org/licenses/by-sa/4.0/
 [cc-by-sa-image]: https://licensebuttons.net/l/by-sa/4.0/88x31.png
 [cc-by-sa-shield]: https://img.shields.io/badge/License-CC%20BY--SA%204.0-lightgrey.svg
+
+# Snake Game
+
+## Introduction
+
+This is a simple Snake game developed in C++ using SDL2 for graphics rendering. The game allows the player to control a snake, eat food, grow longer, and avoid collisions. Additionally, the game features a variety of gameplay mechanics, including adjustable difficulty levels, high score tracking, and more.
+
+## Features
+
+### Game Mechanics
+
+- **Movement**: Use the arrow keys (`Up`, `Down`, `Left`, `Right`) to control the snake's movement.
+- **Eating Food**: The snake grows longer by eating food, represented by yellow squares.
+- **Game Over**: The game ends if the snake hits the wall or collides with its own body.
+- **High Scores**: The high scores are saved to `highScore.txt` and displayed at the end of the game.
+
+### Difficulty Levels
+
+- **Easy**: No walls or poison food.
+- **Normal**: Includes walls; the snake will die if it hits the wall.
+- **Hard**: Adds poison food with a 20% chance, and toxic food that poisons the snake for 5 seconds. While poisoned, the snake moves in the opposite direction of the player's input.
+
+### Pause Feature
+
+- The game can be paused and resumed by pressing the `ESC` key.
+
+### Toxic Food
+
+- Toxic food appears at random and has a 20% chance to appear when the snake eats food.
+- When the snake eats toxic food, it becomes poisoned for 5 seconds.
+- During the poisoned state, the snake will move in the opposite direction (e.g., pressing the `UP` key will make the snake go `DOWN`).
+
+### Modal Box
+
+- When the game ends, a dialog box appears showing the player's score and snake size information.
+
+## Requirements
+
+- **C++ (C++11 or newer)**
+- **SDL2 library**
+
+### Installing SDL2
+
+#### On Ubuntu (or similar Linux OS):
+
+```bash
+sudo apt-get update
+sudo apt-get install libsdl2-dev

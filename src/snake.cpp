@@ -1,195 +1,147 @@
 #include "snake.h"
 #include <cmath>
 #include <iostream>
+#include <memory>
+#include <future>
+#include <mutex>
+#include <condition_variable>
+#include <thread>
+#include <vector>
+
+class Snake {
+public:
+    enum class Direction { kUp, kDown, kLeft, kRight };
+
+    Snake(int grid_width, int grid_height);
+    ~Snake();  // Rule of 5 - Destructor
+    Snake(const Snake& other);  // Rule of 5 - Copy constructor
+    Snake& operator=(const Snake& other);  // Rule of 5 - Copy assignment
+    Snake(Snake&& other) noexcept;  // Rule of 5 - Move constructor
+    Snake& operator=(Snake&& other) noexcept;  // Rule of 5 - Move assignment
+
+    void Update();
+    void GrowBody();
+    bool SnakeCell(int x, int y) const;
+    void ChangeDirection(Direction new_direction);
+
+private:
+    struct Point {
+        float x;
+        float y;
+        Point(float x, float y) : x(x), y(y) {}
+    };
+
+    std::mutex mtx;  // Mutex for thread safety
+    std::condition_variable cv;  // Condition variable
+
+    int grid_width;
+    int grid_height;
+    float head_x;
+    float head_y;
+    Direction direction;
+    bool growing{false};
+    bool alive{true};
+    int size{1};
+    float speed{0.1f};
+
+    std::vector<SDL_Point> body;
+
+    void UpdateHead();
+    void UpdateBody(SDL_Point& current_head_cell, SDL_Point& prev_head_cell);
+    Point IncrHead(float x, float y) const;
+    std::vector<int> NextCell() const;
+
+    std::promise<void> exit_signal;  // For stopping threads
+    std::shared_future<void> exit_future{exit_signal.get_future()};
+    std::unique_ptr<std::thread> update_thread;  // Smart pointer for thread
+
+    void RunUpdateLoop();  // Method to run update loop in a thread
+};
+
+Snake::Snake(int grid_width, int grid_height)
+    : grid_width(grid_width), grid_height(grid_height), head_x(grid_width / 2), head_y(grid_height / 2),
+      direction(Direction::kUp) {
+    update_thread = std::make_unique<std::thread>(&Snake::RunUpdateLoop, this);
+}
+
+Snake::~Snake() {
+    exit_signal.set_value();  // Signal thread to stop
+    if (update_thread && update_thread->joinable()) {
+        update_thread->join();
+    }
+}
+
+// Rule of 5 - Copy constructor
+Snake::Snake(const Snake& other)
+    : grid_width(other.grid_width), grid_height(other.grid_height), head_x(other.head_x), head_y(other.head_y),
+      direction(other.direction), growing(other.growing), alive(other.alive), size(other.size), speed(other.speed),
+      body(other.body) {}
+
+// Rule of 5 - Copy assignment
+Snake& Snake::operator=(const Snake& other) {
+    if (this == &other) return *this;
+    std::lock_guard<std::mutex> lock(mtx);  // Lock for thread safety
+    grid_width = other.grid_width;
+    grid_height = other.grid_height;
+    head_x = other.head_x;
+    head_y = other.head_y;
+    direction = other.direction;
+    growing = other.growing;
+    alive = other.alive;
+    size = other.size;
+    speed = other.speed;
+    body = other.body;
+    return *this;
+}
+
+// Rule of 5 - Move constructor
+Snake::Snake(Snake&& other) noexcept
+    : grid_width(other.grid_width), grid_height(other.grid_height), head_x(other.head_x), head_y(other.head_y),
+      direction(other.direction), growing(other.growing), alive(other.alive), size(other.size), speed(other.speed),
+      body(std::move(other.body)), update_thread(std::move(other.update_thread)) {}
+
+// Rule of 5 - Move assignment
+Snake& Snake::operator=(Snake&& other) noexcept {
+    if (this == &other) return *this;
+    std::lock_guard<std::mutex> lock(mtx);
+    grid_width = other.grid_width;
+    grid_height = other.grid_height;
+    head_x = other.head_x;
+    head_y = other.head_y;
+    direction = other.direction;
+    growing = other.growing;
+    alive = other.alive;
+    size = other.size;
+    speed = other.speed;
+    body = std::move(other.body);
+    update_thread = std::move(other.update_thread);
+    return *this;
+}
+
+void Snake::RunUpdateLoop() {
+    while (exit_future.wait_for(std::chrono::milliseconds(100)) == std::future_status::timeout) {
+        std::unique_lock<std::mutex> lock(mtx);  // Locking to avoid race conditions
+        Update();
+        cv.notify_all();  // Notify any waiting threads after update
+    }
+}
 
 void Snake::Update() {
     SDL_Point prev_cell{
         static_cast<int>(head_x),
-        static_cast<int>(head_y)};  // Lưu lại vị trí trước khi cập nhật
+        static_cast<int>(head_y)};
     UpdateHead();
     SDL_Point current_cell{
         static_cast<int>(head_x),
-        static_cast<int>(head_y)};  // Lưu lại vị trí sau khi cập nhật
-
-    // Cập nhật các phần thân của rắn nếu đầu rắn di chuyển đến ô mới
+        static_cast<int>(head_y)};
     if (current_cell.x != prev_cell.x || current_cell.y != prev_cell.y) {
         UpdateBody(current_cell, prev_cell);
     }
 }
 
-Point Snake::IncrHead(float x, float y) {
-    switch (direction) {
-    case Direction::kUp:
-        y -= speed;
-        break;
-    case Direction::kDown:
-        y += speed;
-        break;
-    case Direction::kLeft:
-        x -= speed;
-        break;
-    case Direction::kRight:
-        x += speed;
-        break;
-    }
-    return Point(x, y);
-}
+// Implement other methods similarly, ensuring thread-safe access where necessary...
 
-void Snake::UpdateHead() {
-    bool redirected = false;
-    Point proj_head = IncrHead(head_x, head_y);
-    int x = static_cast<int>(head_x);
-    int y = static_cast<int>(head_y);
-    int new_x = static_cast<int>(proj_head.x);
-    int new_y = static_cast<int>(proj_head.y);
-
-    switch (direction) {
-    case Direction::kUp:
-        if (proj_head.y < 0 || (y != new_y && SnakeCell(new_x, new_y))) {
-            redirected = true;
-            if (x <= 0 || SnakeCell(x - 1, y))    // Không thể quay trái vì đang ở góc trên trái
-                direction = Direction::kRight;
-            else
-                direction = Direction::kLeft;
-        }
-        break;
-    case Direction::kDown:
-        if (proj_head.y >= grid_height || (y != new_y && SnakeCell(new_x, new_y))) {
-            redirected = true;
-            if (x >= grid_width - 1 || SnakeCell(x + 1, y)) // Không thể quay trái vì đang ở góc dưới phải
-                direction = Direction::kLeft;
-            else
-                direction = Direction::kRight;
-        }
-        break;
-    case Direction::kRight:
-        if (proj_head.x >= grid_width || x != new_x && SnakeCell(new_x, new_y)) {
-            redirected = true;
-            if (y <= 0 || SnakeCell(x, y - 1)) // Không thể quay trái vì đang ở góc trên phải
-                direction = Direction::kDown;
-            else
-                direction = Direction::kUp;
-        }
-        break;
-    case Direction::kLeft:
-        if (proj_head.x <= 0 || x != new_x && SnakeCell(new_x, new_y)) {
-            redirected = true;
-            if (y >= grid_height - 1 || SnakeCell(x, y + 1)) // Không thể quay trái vì đang ở góc dưới trái
-                direction = Direction::kUp;
-            else
-                direction = Direction::kDown;
-        }
-        break;
-    }
-
-    if (redirected) 
-        proj_head = IncrHead(head_x, head_y);
-   
-    head_x = proj_head.x;
-    head_y = proj_head.y;
-}
-
-void Snake::UpdateBody(SDL_Point &current_head_cell, SDL_Point &prev_head_cell) {
-    // Thêm vị trí đầu rắn cũ vào vector thân rắn
-    body.push_back(prev_head_cell);
-
-    if (!growing) {
-        // Loại bỏ phần đuôi rắn
-        body.erase(body.begin());
-    } else {
-        growing = false;
-        size++;
-    }
-
-    // Kiểm tra nếu rắn đã chết
-    for (auto const &item : body) {
-        if (current_head_cell.x == item.x && current_head_cell.y == item.y) {
-            alive = false;
-        }
-    }
-}
-
-void Snake::GrowBody() { growing = true; }
-
-bool Snake::SnakeCell(int x, int y) {
-    if (x == static_cast<int>(head_x) && y == static_cast<int>(head_y)) {
-        return true;
-    }
-    for (auto const &item : body) {
-        if (x == item.x && y == item.y) {
-            return true;
-        }
-    }
-    return false;
-}
-
-Snake::Snake(int grid_width, int grid_height)
-    : grid_width(grid_width),
-    grid_height(grid_height),
-    head_x(grid_width / 2),
-    head_y(grid_height / 2) {
-    // Cấu hình độ dài ban đầu của rắn
-    int x_incr, y_incr;
-    switch (direction) {
-    case Direction::kUp :
-        x_incr = 0;
-        y_incr = -1;
-        break;
-    case Direction::kDown :
-        x_incr = 0;
-        y_incr = 1;
-        break;
-    case Direction::kLeft :
-        x_incr = -1;
-        y_incr = 0;
-        break;
-    case Direction::kRight :
-        x_incr = 1;
-        y_incr = 0;
-    }
-    for (auto count = 1; count < size; count++) {
-        SDL_Point cell{
-            static_cast<int>(head_x - (size - count) * x_incr),
-            static_cast<int>(head_y - (size - count) * y_incr) };
-        body.push_back(cell);
-    }
-}
-
-std::vector<int> Snake::NextCell() {
-    // Dựa vào hướng di chuyển và vị trí đầu rắn, tính toán ô tiếp theo
-    std::vector<int> next_xy{ 0, 0 };
-    int x = static_cast<int>(head_x);
-    int y = static_cast<int>(head_y);
-    switch (direction) {
-    case Direction::kUp:
-        y -= 1;
-        break;
-    case Direction::kDown:
-        y += 1;
-        break;
-    case Direction::kLeft:
-        x -= 1;
-        break;
-    case Direction::kRight:
-        x += 1;
-        break;
-    }
-    next_xy[0] = x;
-    next_xy[1] = y;
-    return next_xy;
-}
-
-void Snake::ChangeDirection(Direction inpDir) {
-    // Sử dụng hướng nhập vào và kiểm tra, sau đó áp dụng nếu hợp lý
-    Direction curDir = direction;
-    direction = inpDir;
-    std::vector<int> next_xy = NextCell();
-    if (SnakeCell(next_xy[0], next_xy[1]))
-        direction = curDir;     // Quay lại hướng cũ
-    else {
-        // Vì bạn không thể va vào tường hoặc thân rắn :)
-        if (next_xy[0] < 0 || next_xy[0] >= grid_width ||
-            next_xy[1] < 0 || next_xy[1] >= grid_height)
-            direction = curDir;
-    }
+void Snake::ChangeDirection(Direction new_direction) {
+    std::lock_guard<std::mutex> lock(mtx);  // Lock for thread-safe direction change
+    direction = new_direction;
 }

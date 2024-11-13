@@ -1,6 +1,8 @@
 #include "renderer.h"
 #include <iostream>
 #include <string>
+#include <thread>
+#include <future>  // Thư viện để sử dụng promise và future
 
 Renderer::Renderer(const std::size_t screen_width,
                    const std::size_t screen_height,
@@ -150,3 +152,27 @@ void Renderer::RenderBody(Snake const snake, SDL_Rect &block) {
     SDL_RenderFillRect(sdl_renderer, &block);
   }
 }
+
+// Hàm xử lý bất đồng bộ sử dụng promise và future
+void Renderer::LoadResourcesAsync() {
+  std::promise<void> resource_promise;
+  std::future<void> resource_future = resource_promise.get_future();
+
+  // Tạo một luồng con để tải tài nguyên
+  std::thread resource_thread([&resource_promise]() {
+    // Giả lập việc tải tài nguyên
+    std::this_thread::sleep_for(std::chrono::seconds(2));  // Giả lập thời gian tải tài nguyên
+    std::cout << "Tài nguyên đã được tải xong.\n";
+    resource_promise.set_value();  // Gửi tín hiệu rằng tài nguyên đã tải xong
+  });
+
+  // Đợi luồng tải tài nguyên kết thúc
+  resource_future.get();
+
+  // Khi tài nguyên đã tải xong, tiếp tục xử lý
+  std::cout << "Tiến trình chính tiếp tục.\n";
+
+  // Đảm bảo luồng con được join trước khi kết thúc
+  resource_thread.join();
+}
+

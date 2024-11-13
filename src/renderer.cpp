@@ -1,6 +1,9 @@
 #include "renderer.h"
 #include <iostream>
 #include <string>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 Renderer::Renderer(const std::size_t screen_width,
                    const std::size_t screen_height,
@@ -8,7 +11,8 @@ Renderer::Renderer(const std::size_t screen_width,
     : screen_width(screen_width),
       screen_height(screen_height),
       grid_width(grid_width),
-      grid_height(grid_height) {
+      grid_height(grid_height),
+      is_running(false) {
   // Initialize SDL
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
     std::cerr << "SDL could not initialize.\n";
@@ -34,11 +38,12 @@ Renderer::Renderer(const std::size_t screen_width,
 }
 
 Renderer::~Renderer() {
+  SDL_DestroyRenderer(sdl_renderer);
   SDL_DestroyWindow(sdl_window);
   SDL_Quit();
 }
 
-void Renderer::Render(Snake const snake, SDL_Point const &food) {
+void Renderer::Render(Snake const& snake, SDL_Point const& food) {
   SDL_Rect block;
   block.w = screen_width / grid_width;
   block.h = screen_height / grid_height;
@@ -128,7 +133,7 @@ void Renderer::RenderBlock(Direction dir, int x, int y, SDL_Rect& block) {
   }
 }
 
-void Renderer::RenderBody(Snake const snake, SDL_Rect &block) {
+void Renderer::RenderBody(Snake const& snake, SDL_Rect& block) {
   Direction orientation;
   const std::vector<SDL_Point>& body = snake.GetBody();
   int x = static_cast<int>(snake.GetHead().x);
@@ -150,3 +155,33 @@ void Renderer::RenderBody(Snake const snake, SDL_Rect &block) {
     SDL_RenderFillRect(sdl_renderer, &block);
   }
 }
+
+// Start a new thread to handle the rendering asynchronously
+void Renderer::StartRendering() {
+  is_running = true;
+  render_thread = std::thread(&Renderer::RenderLoop, this);
+}
+
+void Renderer::StopRendering() {
+  is_running = false;
+  condition.notify_all(); // Notify any waiting threads to exit
+  if (render_thread.joinable()) {
+    render_thread.join();
+  }
+}
+
+void Renderer::RenderLoop() {
+  std::mutex mutex;
+  std::condition_variable cv;
+
+  while (is_running) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(16));  // ~60 FPS
+
+    {
+      std::lock_guard<std::mutex> lock(mutex);  // Synchronize rendering
+      // You would call your actual render function here, for example:
+      // Render(snake, food);
+    }
+  }
+}
+

@@ -19,7 +19,6 @@ class Renderer {
   Direction Oriented(int x1, int y1, int x2, int y2);
   Direction Oriented(SDL_Point, SDL_Point);
   void RenderBlock(Direction, int, int, SDL_Rect& block);
-  void LoadResourcesAsync();
 
  private:
   SDL_Window *sdl_window;

@@ -1,6 +1,7 @@
 #include "renderer.h"
 #include <iostream>
 #include <string>
+#include <memory> // for smart pointers
 
 Renderer::Renderer(const std::size_t screen_width,
                    const std::size_t screen_height,
@@ -15,18 +16,24 @@ Renderer::Renderer(const std::size_t screen_width,
     std::cerr << "SDL_Error: " << SDL_GetError() << "\n";
   }
 
-  // Create Window
-  sdl_window = SDL_CreateWindow("Snake Game", SDL_WINDOWPOS_CENTERED,
-                                SDL_WINDOWPOS_CENTERED, screen_width,
-                                screen_height, SDL_WINDOW_SHOWN);
+  // Create Window using unique_ptr
+  sdl_window = std::unique_ptr<SDL_Window, void(*)(SDL_Window*)>(
+    SDL_CreateWindow("Snake Game", SDL_WINDOWPOS_CENTERED,
+                     SDL_WINDOWPOS_CENTERED, screen_width,
+                     screen_height, SDL_WINDOW_SHOWN),
+    SDL_DestroyWindow
+  );
 
   if (nullptr == sdl_window) {
     std::cerr << "Window could not be created.\n";
     std::cerr << " SDL_Error: " << SDL_GetError() << "\n";
   }
 
-  // Create renderer
-  sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED);
+  // Create renderer using unique_ptr
+  sdl_renderer = std::unique_ptr<SDL_Renderer, void(*)(SDL_Renderer*)>(
+    SDL_CreateRenderer(sdl_window.get(), -1, SDL_RENDERER_ACCELERATED),
+    SDL_DestroyRenderer
+  );
   if (nullptr == sdl_renderer) {
     std::cerr << "Renderer could not be created.\n";
     std::cerr << "SDL_Error: " << SDL_GetError() << "\n";
@@ -34,24 +41,107 @@ Renderer::Renderer(const std::size_t screen_width,
 }
 
 Renderer::~Renderer() {
-  SDL_DestroyWindow(sdl_window);
   SDL_Quit();
 }
 
-void Renderer::Render(Snake const snake, SDL_Point const &food) {
+// Copy constructor (deep copy)
+Renderer::Renderer(const Renderer& other)
+    : screen_width(other.screen_width),
+      screen_height(other.screen_height),
+      grid_width(other.grid_width),
+      grid_height(other.grid_height),
+      sdl_window(SDL_CreateWindow("Snake Game", SDL_WINDOWPOS_CENTERED,
+                                 SDL_WINDOWPOS_CENTERED, screen_width,
+                                 screen_height, SDL_WINDOW_SHOWN),
+                 SDL_DestroyWindow),
+      sdl_renderer(SDL_CreateRenderer(sdl_window.get(), -1, SDL_RENDERER_ACCELERATED),
+                   SDL_DestroyRenderer) {
+  if (!sdl_window || !sdl_renderer) {
+    std::cerr << "Error copying SDL resources.\n";
+  }
+}
+
+// Copy assignment operator (deep copy)
+Renderer& Renderer::operator=(const Renderer& other) {
+  if (this != &other) {
+    // Clean up existing resources
+    SDL_Quit();
+
+    // Copy data members
+    screen_width = other.screen_width;
+    screen_height = other.screen_height;
+    grid_width = other.grid_width;
+    grid_height = other.grid_height;
+
+    // Recreate resources
+    sdl_window = std::unique_ptr<SDL_Window, void(*)(SDL_Window*)>(
+      SDL_CreateWindow("Snake Game", SDL_WINDOWPOS_CENTERED,
+                       SDL_WINDOWPOS_CENTERED, screen_width,
+                       screen_height, SDL_WINDOW_SHOWN),
+      SDL_DestroyWindow
+    );
+    sdl_renderer = std::unique_ptr<SDL_Renderer, void(*)(SDL_Renderer*)>(
+      SDL_CreateRenderer(sdl_window.get(), -1, SDL_RENDERER_ACCELERATED),
+      SDL_DestroyRenderer
+    );
+
+    if (!sdl_window || !sdl_renderer) {
+      std::cerr << "Error copying SDL resources.\n";
+    }
+  }
+  return *this;
+}
+
+// Move constructor
+Renderer::Renderer(Renderer&& other) noexcept
+    : screen_width(other.screen_width),
+      screen_height(other.screen_height),
+      grid_width(other.grid_width),
+      grid_height(other.grid_height),
+      sdl_window(std::move(other.sdl_window)),
+      sdl_renderer(std::move(other.sdl_renderer)) {
+  other.screen_width = 0;
+  other.screen_height = 0;
+  other.grid_width = 0;
+  other.grid_height = 0;
+}
+
+// Move assignment operator
+Renderer& Renderer::operator=(Renderer&& other) noexcept {
+  if (this != &other) {
+    // Clean up existing resources
+    SDL_Quit();
+
+    // Move data members
+    screen_width = other.screen_width;
+    screen_height = other.screen_height;
+    grid_width = other.grid_width;
+    grid_height = other.grid_height;
+    sdl_window = std::move(other.sdl_window);
+    sdl_renderer = std::move(other.sdl_renderer);
+
+    other.screen_width = 0;
+    other.screen_height = 0;
+    other.grid_width = 0;
+    other.grid_height = 0;
+  }
+  return *this;
+}
+
+void Renderer::Render(Snake const snake, SDL_Point const& food) {
   SDL_Rect block;
   block.w = screen_width / grid_width;
   block.h = screen_height / grid_height;
 
   // Clear screen
-  SDL_SetRenderDrawColor(sdl_renderer, 0x1E, 0x1E, 0x1E, 0xFF);
-  SDL_RenderClear(sdl_renderer);
+  SDL_SetRenderDrawColor(sdl_renderer.get(), 0x1E, 0x1E, 0x1E, 0xFF);
+  SDL_RenderClear(sdl_renderer.get());
 
   // Render food
-  SDL_SetRenderDrawColor(sdl_renderer, 0xFF, 0xCC, 0x00, 0xFF);
+  SDL_SetRenderDrawColor(sdl_renderer.get(), 0xFF, 0xCC, 0x00, 0xFF);
   block.x = food.x * block.w;
   block.y = food.y * block.h;
-  SDL_RenderFillRect(sdl_renderer, &block);
+  SDL_RenderFillRect(sdl_renderer.get(), &block);
 
   // Render snake's body
   RenderBody(snake, block);
@@ -59,17 +149,17 @@ void Renderer::Render(Snake const snake, SDL_Point const &food) {
   // Render snake's head
   block.x = static_cast<int>(snake.GetHead().x) * block.w;
   block.y = static_cast<int>(snake.GetHead().y) * block.h;
-  SDL_SetRenderDrawColor(sdl_renderer, snake.IsAlive() ? 0x00 : 0xFF,
+  SDL_SetRenderDrawColor(sdl_renderer.get(), snake.IsAlive() ? 0x00 : 0xFF,
                          snake.IsAlive() ? 0x7A : 0x00, 0xCC, 0xFF);
-  SDL_RenderFillRect(sdl_renderer, &block);
+  SDL_RenderFillRect(sdl_renderer.get(), &block);
 
   // Update Screen
-  SDL_RenderPresent(sdl_renderer);
+  SDL_RenderPresent(sdl_renderer.get());
 }
 
 void Renderer::UpdateWindowTitle(int score, int fps) {
   std::string title{"Snake Score: " + std::to_string(score) + " FPS: " + std::to_string(fps)};
-  SDL_SetWindowTitle(sdl_window, title.c_str());
+  SDL_SetWindowTitle(sdl_window.get(), title.c_str());
 }
 
 Renderer::Direction Renderer::Oriented(int x1, int y1, int x2, int y2) {
@@ -118,7 +208,7 @@ void Renderer::RenderBlock(Direction dir, int x, int y, SDL_Rect& block) {
 
   block.x = adjustedX;
   block.y = adjustedY;
-  SDL_RenderFillRect(sdl_renderer, &block);
+  SDL_RenderFillRect(sdl_renderer.get(), &block);
   // Restore the block size after drawing.
   if (dir == Direction::kUp || dir == Direction::kDown) {
     block.w += 2;
@@ -133,20 +223,18 @@ void Renderer::RenderBody(Snake const snake, SDL_Rect &block) {
   const std::vector<SDL_Point>& body = snake.GetBody();
   int x = static_cast<int>(snake.GetHead().x);
   int y = static_cast<int>(snake.GetHead().y);
-  SDL_SetRenderDrawColor(sdl_renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+  SDL_SetRenderDrawColor(sdl_renderer.get(), 0xFF, 0xFF, 0xFF, 0xFF);
 
   // Render head
   block.x = x * block.w;
   block.y = y * block.h;
-  SDL_RenderFillRect(sdl_renderer, &block);
+  SDL_RenderFillRect(sdl_renderer.get(), &block);
 
   // Render body
   for (size_t i = 0; i < body.size(); ++i) {
-    // Ensure the body part is connected
+    orientation = Oriented(x, y, body[i].x, body[i].y);
+    RenderBlock(orientation, body[i].x, body[i].y, block);
     x = body[i].x;
     y = body[i].y;
-    block.x = x * block.w;
-    block.y = y * block.h;
-    SDL_RenderFillRect(sdl_renderer, &block);
   }
 }

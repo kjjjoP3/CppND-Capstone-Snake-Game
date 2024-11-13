@@ -135,13 +135,19 @@ void Renderer::RenderBody(Snake const snake, SDL_Rect &block) {
   int y = static_cast<int>(snake.GetHead().y);
   SDL_SetRenderDrawColor(sdl_renderer, 0xFF, 0xFF, 0xFF, 0xFF);
 
-  // Render last body part
-  orientation = Oriented(x, y, body.back().x, body.back().y);
-  RenderBlock(orientation, body.back().x, body.back().y, block);
+  // Render head
+  block.x = x * block.w;
+  block.y = y * block.h;
+  SDL_RenderFillRect(sdl_renderer, &block);
 
-  // Render the rest of the body
-  for (auto point = body.rbegin() + 1; point != body.rend(); ++point) {
-    orientation = Oriented(*(point - 1), *point);
-    RenderBlock(orientation, point->x, point->y, block);
+  // Render body
+  for (size_t i = 0; i < body.size(); ++i) {
+    // Ensure the body part is connected
+    x = body[i].x;
+    y = body[i].y;
+    block.x = x * block.w;
+    block.y = y * block.h;
+    SDL_RenderFillRect(sdl_renderer, &block);
   }
+}
 }

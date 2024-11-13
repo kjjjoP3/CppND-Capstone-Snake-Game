@@ -22,7 +22,7 @@ Renderer::Renderer(const std::size_t screen_width,
 
   if (nullptr == sdl_window) {
     std::cerr << "Window could not be created.\n";
-    std::cerr << "SDL_Error: " << SDL_GetError() << "\n";
+    std::cerr << " SDL_Error: " << SDL_GetError() << "\n";
   }
 
   // Create renderer
@@ -59,11 +59,8 @@ void Renderer::Render(Snake const snake, SDL_Point const &food) {
   // Render snake's head
   block.x = static_cast<int>(snake.GetHead().x) * block.w;
   block.y = static_cast<int>(snake.GetHead().y) * block.h;
-  if (snake.IsAlive()) {
-    SDL_SetRenderDrawColor(sdl_renderer, 0x00, 0x7A, 0xCC, 0xFF);
-  } else {
-    SDL_SetRenderDrawColor(sdl_renderer, 0xFF, 0x00, 0x00, 0xFF);
-  }
+  SDL_SetRenderDrawColor(sdl_renderer, snake.IsAlive() ? 0x00 : 0xFF,
+                         snake.IsAlive() ? 0x7A : 0x00, 0xCC, 0xFF);
   SDL_RenderFillRect(sdl_renderer, &block);
 
   // Update Screen
@@ -75,66 +72,76 @@ void Renderer::UpdateWindowTitle(int score, int fps) {
   SDL_SetWindowTitle(sdl_window, title.c_str());
 }
 
-Renderer::Direction Renderer::Oriented(int x1, int y1, int x2, int y2)
-{
-    // Simplified logic using a ternary approach to determine direction
-    if (y1 != y2) {
-        return (y1 < y2) ? Direction::kUp : Direction::kDown;
-    }
-    return (x1 < x2) ? Direction::kLeft : Direction::kRight;
+Renderer::Direction Renderer::Oriented(int x1, int y1, int x2, int y2) {
+  if (y1 < y2)
+    return Direction::kUp;
+  else if (y1 > y2)
+    return Direction::kDown;
+  else if (x1 < x2)
+    return Direction::kLeft;
+  return Direction::kRight;
 }
 
-Renderer::Direction Renderer::Oriented(SDL_Point p1, SDL_Point p2)
-{
-    // Directly using simplified logic to determine orientation
-    return Oriented(p1.x, p1.y, p2.x, p2.y);
+Renderer::Direction Renderer::Oriented(SDL_Point p1, SDL_Point p2) {
+  if (p1.y < p2.y)
+    return Direction::kUp;
+  else if (p1.y > p2.y)
+    return Direction::kDown;
+  else if (p1.x < p2.x)
+    return Direction::kLeft;
+  return Direction::kRight;
 }
 
-void Renderer::RenderBlock(Direction dir, int x, int y, SDL_Rect& block)
-{
-    // Consolidated logic for adjusting block position based on direction
-    int offset_x = 0, offset_y = 0, adjustment = 0;
-    switch (dir) {
+void Renderer::RenderBlock(Direction dir, int x, int y, SDL_Rect& block) {
+  int adjustedX = x * block.w;
+  int adjustedY = y * block.h;
+
+  switch (dir) {
     case Direction::kUp:
-        offset_y = -1;
-        adjustment = -2;
-        break;
+      adjustedY -= 1;
+      block.w -= 2;
+      break;
     case Direction::kDown:
-        offset_y = 1;
-        adjustment = 2;
-        break;
+      adjustedY += 1;
+      block.w -= 2;
+      break;
     case Direction::kLeft:
-        offset_x = -2;
-        adjustment = 1;
-        break;
+      adjustedX -= 2;
+      block.h -= 2;
+      block.w += 1;
+      break;
     case Direction::kRight:
-        offset_x = 1;
-        adjustment = 1;
-        break;
-    }
-    
-    block.x = x * block.w + offset_x;
-    block.y = y * block.h + offset_y;
-    block.w += (dir == Direction::kLeft || dir == Direction::kRight) ? adjustment : 0;
-    block.h += (dir == Direction::kUp || dir == Direction::kDown) ? adjustment : 0;
-    SDL_RenderFillRect(sdl_renderer, &block);
+      adjustedX += 1;
+      block.h -= 2;
+      break;
+  }
+
+  block.x = adjustedX;
+  block.y = adjustedY;
+  SDL_RenderFillRect(sdl_renderer, &block);
+  // Restore the block size after drawing.
+  if (dir == Direction::kUp || dir == Direction::kDown) {
+    block.w += 2;
+  } else if (dir == Direction::kLeft || dir == Direction::kRight) {
+    block.h += 2;
+    block.w -= 1;
+  }
 }
 
-void Renderer::RenderBody(Snake const snake, SDL_Rect &block)
-{
-    Direction orientation;
-    const std::vector<SDL_Point>& body = snake.GetBody();
-    int x = static_cast<int>(snake.GetHead().x);
-    int y = static_cast<int>(snake.GetHead().y);
-    SDL_SetRenderDrawColor(sdl_renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+void Renderer::RenderBody(Snake const snake, SDL_Rect &block) {
+  Direction orientation;
+  const std::vector<SDL_Point>& body = snake.GetBody();
+  int x = static_cast<int>(snake.GetHead().x);
+  int y = static_cast<int>(snake.GetHead().y);
+  SDL_SetRenderDrawColor(sdl_renderer, 0xFF, 0xFF, 0xFF, 0xFF);
 
-    if (!body.empty()) {
-        orientation = Oriented(x, y, body.back().x, body.back().y);
-        RenderBlock(orientation, body.back().x, body.back().y, block);
-    }
+  // Render last body part
+  orientation = Oriented(x, y, body.back().x, body.back().y);
+  RenderBlock(orientation, body.back().x, body.back().y, block);
 
-    for (auto point = body.rbegin() + 1; point != body.rend(); ++point) {
-        orientation = Oriented(*(point - 1), *point);
-        RenderBlock(orientation, point->x, point->y, block);
-    }
+  // Render the rest of the body
+  for (auto point = body.rbegin() + 1; point != body.rend(); ++point) {
+    orientation = Oriented(*(point - 1), *point);
+    RenderBlock(orientation, point->x, point->y, block);
+  }
 }

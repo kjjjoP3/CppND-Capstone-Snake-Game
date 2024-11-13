@@ -2,8 +2,13 @@
 #include <iostream>
 #include <string>
 #include <thread>
-#include <mutex>
 #include <condition_variable>
+#include <atomic>
+
+// Định nghĩa biến condition_variable và atomic để đồng bộ hóa
+std::condition_variable cv;
+std::mutex mtx;
+std::atomic<bool> is_rendering_done(false);
 
 Renderer::Renderer(const std::size_t screen_width,
                    const std::size_t screen_height,
@@ -12,7 +17,7 @@ Renderer::Renderer(const std::size_t screen_width,
       screen_height(screen_height),
       grid_width(grid_width),
       grid_height(grid_height),
-      is_running(false) {
+      sdl_window(nullptr), sdl_renderer(nullptr) {
   // Initialize SDL
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
     std::cerr << "SDL could not initialize.\n";
@@ -38,11 +43,17 @@ Renderer::Renderer(const std::size_t screen_width,
 }
 
 Renderer::~Renderer() {
-  SDL_DestroyRenderer(sdl_renderer);
-  SDL_DestroyWindow(sdl_window);
+  // Destructor để giải phóng tài nguyên
+  if (sdl_renderer) {
+    SDL_DestroyRenderer(sdl_renderer);
+  }
+  if (sdl_window) {
+    SDL_DestroyWindow(sdl_window);
+  }
   SDL_Quit();
 }
 
+// Hàm Render với tham chiếu
 void Renderer::Render(Snake const& snake, SDL_Point const& food) {
   SDL_Rect block;
   block.w = screen_width / grid_width;
@@ -70,6 +81,13 @@ void Renderer::Render(Snake const& snake, SDL_Point const& food) {
 
   // Update Screen
   SDL_RenderPresent(sdl_renderer);
+
+  // Đánh dấu kết thúc quá trình render
+  {
+    std::lock_guard<std::mutex> lock(mtx);
+    is_rendering_done = true;
+  }
+  cv.notify_one();
 }
 
 void Renderer::UpdateWindowTitle(int score, int fps) {
@@ -124,6 +142,7 @@ void Renderer::RenderBlock(Direction dir, int x, int y, SDL_Rect& block) {
   block.x = adjustedX;
   block.y = adjustedY;
   SDL_RenderFillRect(sdl_renderer, &block);
+
   // Restore the block size after drawing.
   if (dir == Direction::kUp || dir == Direction::kDown) {
     block.w += 2;
@@ -133,7 +152,7 @@ void Renderer::RenderBlock(Direction dir, int x, int y, SDL_Rect& block) {
   }
 }
 
-void Renderer::RenderBody(Snake const& snake, SDL_Rect& block) {
+void Renderer::RenderBody(Snake const& snake, SDL_Rect &block) {
   Direction orientation;
   const std::vector<SDL_Point>& body = snake.GetBody();
   int x = static_cast<int>(snake.GetHead().x);
@@ -156,32 +175,24 @@ void Renderer::RenderBody(Snake const& snake, SDL_Rect& block) {
   }
 }
 
-// Start a new thread to handle the rendering asynchronously
-void Renderer::StartRendering() {
-  is_running = true;
-  render_thread = std::thread(&Renderer::RenderLoop, this);
-}
+// Hàm này sử dụng condition variable để đồng bộ hóa luồng
+void Renderer::StartRenderingThread() {
+  std::thread render_thread([this]() {
+    while (!is_rendering_done) {
+      RenderLoop();
+      std::this_thread::sleep_for(std::chrono::milliseconds(16));  // Giả lập FPS ~60
+    }
+  });
 
-void Renderer::StopRendering() {
-  is_running = false;
-  condition.notify_all(); // Notify any waiting threads to exit
-  if (render_thread.joinable()) {
-    render_thread.join();
-  }
+  render_thread.detach();
 }
 
 void Renderer::RenderLoop() {
-  std::mutex mutex;
-  std::condition_variable cv;
+  // Đợi cho đến khi render hoàn tất
+  std::unique_lock<std::mutex> lock(mtx);
+  cv.wait(lock, [] { return is_rendering_done.load(); });
 
-  while (is_running) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(16));  // ~60 FPS
-
-    {
-      std::lock_guard<std::mutex> lock(mutex);  // Synchronize rendering
-      // You would call your actual render function here, for example:
-      // Render(snake, food);
-    }
-  }
+  // Reset trạng thái sau khi render
+  is_rendering_done = false;
 }
 

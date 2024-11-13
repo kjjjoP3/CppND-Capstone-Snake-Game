@@ -1,43 +1,33 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
-#include <SDL2/SDL.h>
-#include <memory>
-#include "snake.h" // Chắc chắn rằng Snake đã được khai báo ở đây hoặc trước đó
+#include <vector>
+#include "SDL.h"
+#include "snake.h"
 
 class Renderer {
-public:
-    enum class Direction {
-        UP,
-        DOWN,
-        LEFT,
-        RIGHT
-    };
+ public:
+     enum class Direction { kUp, kDown, kLeft, kRight };
 
-    Renderer(const std::size_t screen_width,
-             const std::size_t screen_height,
-             const std::size_t block_size,
-             const std::size_t block_count);
-    
-    Renderer(Renderer&& other) noexcept;
-    Renderer& operator=(Renderer&& other) noexcept;
-    ~Renderer();
+  Renderer(const std::size_t screen_width, const std::size_t screen_height,
+           const std::size_t grid_width, const std::size_t grid_height);
+  ~Renderer();
 
-    void Render(Snake& snake, const SDL_Point& food);
-    void UpdateWindowTitle(int score, int high_score);
+  void Render(Snake const snake, SDL_Point const &food);
+  void RenderBody(Snake const snake, SDL_Rect &block);
+  void UpdateWindowTitle(int score, int fps);
+  Direction Oriented(int x1, int y1, int x2, int y2);
+  Direction Oriented(SDL_Point, SDL_Point);
+  void RenderBlock(Direction, int, int, SDL_Rect& block);
 
-private:
-    void InitSDL();
-    void RenderBlock(Direction direction, int x, int y, SDL_Rect& block);
-    void RenderBody(Snake& snake, SDL_Rect& block);
-    void CleanUp();
+ private:
+  SDL_Window *sdl_window;
+  SDL_Renderer *sdl_renderer;
 
-    std::unique_ptr<SDL_Window, decltype(&SDL_DestroyWindow)> sdl_window;
-    std::unique_ptr<SDL_Renderer, decltype(&SDL_DestroyRenderer)> sdl_renderer;
-    std::size_t screen_width;
-    std::size_t screen_height;
-    std::size_t block_size;
-    std::size_t block_count;
+  const std::size_t screen_width;
+  const std::size_t screen_height;
+  const std::size_t grid_width;
+  const std::size_t grid_height;
 };
 
-#endif // RENDERER_H
+#endif

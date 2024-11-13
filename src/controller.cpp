@@ -3,20 +3,17 @@
 #include "SDL.h"
 #include "snake.h"
 
-void Controller::ChangeDirection(Snake &snake, Snake::Direction newDirection,
-                                 Snake::Direction oppositeDirection) const {
-  // Nếu hướng hiện tại khác hướng ngược lại, thay đổi hướng của rắn
-  // Hoặc nếu kích thước rắn là 1, không bị giới hạn trong hướng ngược lại
-  if (snake.GetDirection() != oppositeDirection || snake.GetSize() == 1) {
-    snake.SetDirection(newDirection);
-  }
+void Controller::ChangeDirection(Snake &snake, Snake::Direction input,
+                                 Snake::Direction opposite) const {
+  // Đảm bảo rắn không quay ngược lại trừ khi có kích thước bằng 1
+  snake.ChangeDirection(input);
 }
 
-void Controller::HandleInput(bool &isRunning, Snake &snake) const {
+void Controller::HandleInput(bool &is_running, Snake &snake) const {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     if (event.type == SDL_QUIT) {
-      isRunning = false;
+      is_running = false;
     } else if (event.type == SDL_KEYDOWN) {
       switch (event.key.keysym.sym) {
         case SDLK_UP:

@@ -4,6 +4,9 @@
 #include <vector>
 #include "SDL.h"
 #include "snake.h"
+#include <thread>
+#include <condition_variable>
+#include <mutex>
 
 class Renderer {
  public:
@@ -19,6 +22,8 @@ class Renderer {
   Direction Oriented(int x1, int y1, int x2, int y2);
   Direction Oriented(SDL_Point, SDL_Point);
   void RenderBlock(Direction, int, int, SDL_Rect& block);
+  void StartRenderingThread();
+  void RenderLoop();
 
  private:
   SDL_Window *sdl_window;

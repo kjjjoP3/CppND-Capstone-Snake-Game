@@ -4,9 +4,6 @@
 #include <vector>
 #include "SDL.h"
 #include "snake.h"
-#include <thread>
-#include <condition_variable>
-#include <mutex>
 
 class Renderer {
  public:

@@ -150,4 +150,3 @@ void Renderer::RenderBody(Snake const snake, SDL_Rect &block) {
     SDL_RenderFillRect(sdl_renderer, &block);
   }
 }
-}

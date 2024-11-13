@@ -103,7 +103,7 @@ void Renderer::RenderBlock(Direction dir, int x, int y, SDL_Rect &block) {
   }
 }
 
-void Renderer::RenderBody(const Snake &snake, SDL_Rect &block) {
+void Renderer::RenderBody(Snake const snake, SDL_Rect &block) {
   SDL_SetRenderDrawColor(sdl_renderer, 0xFF, 0xFF, 0xFF, 0xFF);
   const auto &body = snake.GetBody();
   auto orientation = Oriented(snake.GetHead().x, snake.GetHead().y, body.back().x, body.back().y);

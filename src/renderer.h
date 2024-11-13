@@ -13,11 +13,11 @@ class Renderer {
            const std::size_t grid_width, const std::size_t grid_height);
   ~Renderer();
 
-  void Render(Snake const snake, SDL_Point const &food);
+  void Render(const Snake &snake, const SDL_Point &food);
   void RenderBody(Snake const snake, SDL_Rect &block);
   void UpdateWindowTitle(int score, int fps);
   Direction Oriented(int x1, int y1, int x2, int y2);
-  Direction Oriented(SDL_Point, SDL_Point);
+  Direction Oriented(const SDL_Point &p1, const SDL_Point &p2);
   void RenderBlock(Direction, int, int, SDL_Rect& block);
 
  private:

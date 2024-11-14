@@ -4,14 +4,12 @@
 #include "snake.h"
 
 class Controller {
- public:
-  // Xử lý các sự kiện nhập liệu từ người dùng
-  void HandleInput(bool &isRunning, Snake &snake) const;
+public:
+ void HandleInput(bool &running, Snake &snake) const;
 
- private:
-  // Thay đổi hướng của rắn với các điều kiện đối nghịch
-  void ChangeDirection(Snake &snake, Snake::Direction newDirection,
-                       Snake::Direction oppositeDirection) const;
+private:
+ void ChangeDirection(Snake &snake, Snake::Direction input,
+                      Snake::Direction opposite) const;
 };
 
 #endif

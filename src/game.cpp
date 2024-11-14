@@ -1,13 +1,18 @@
 #include "game.h"
 #include <iostream>
+#include <thread>
+#include <future>
 #include "SDL.h"
 
 Game::Game(std::size_t grid_width, std::size_t grid_height)
     : snake(grid_width, grid_height),
       engine(dev()),
-      random_w(0, static_cast<int>(grid_width - 1)),          // Khắc phục lỗi thức ăn ngoài màn hình
-      random_h(0, static_cast<int>(grid_height - 1)) {
-  GenerateFood(); // Đặt thức ăn tại vị trí mới
+      random_w(0, static_cast<int>(grid_width - 1)),
+      random_h(0, static_cast<int>(grid_height - 1)),
+      scoreManager("highscore.txt"),
+      exit_future(exit_signal.get_future().share()) 
+{
+  PlaceFood();
 }
 
 void Game::Run(Controller const &controller, Renderer &renderer,
@@ -17,40 +22,57 @@ void Game::Run(Controller const &controller, Renderer &renderer,
   Uint32 frame_end;
   Uint32 frame_duration;
   int frame_count = 0;
-  bool is_running = true;
+  bool running = true;
 
-  while (is_running) {
+  update_thread = std::thread([&]() {
+      while (exit_future.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
+          Update();
+          std::this_thread::sleep_for(std::chrono::milliseconds(target_frame_duration));
+      }
+  });
+
+  while (running) {
     frame_start = SDL_GetTicks();
 
-    // Vòng lặp chính của trò chơi: Xử lý đầu vào, cập nhật trạng thái, và hiển thị.
-    controller.HandleInput(is_running, snake);
-    Update();
+    // Input, Render - main game loop
+    controller.HandleInput(running, snake);
     renderer.Render(snake, food);
 
     frame_end = SDL_GetTicks();
+
+    // Keep track of frame duration
     frame_count++;
     frame_duration = frame_end - frame_start;
 
-    // Cập nhật tiêu đề cửa sổ mỗi giây một lần.
+    // Update window title every second
     if (frame_end - title_timestamp >= 1000) {
       renderer.UpdateWindowTitle(score, frame_count);
       frame_count = 0;
       title_timestamp = frame_end;
     }
 
-    // Điều chỉnh thời gian nghỉ giữa các khung hình để duy trì tốc độ khung hình cố định.
+    // Delay to maintain target frame rate
     if (frame_duration < target_frame_duration) {
       SDL_Delay(target_frame_duration - frame_duration);
     }
   }
+
+  // Stop the update thread
+  exit_signal.set_value();
+  if (update_thread.joinable()) {
+    update_thread.join();
+  }
+
+  // Save high score when game ends
+  scoreManager.saveHighScore(score);
 }
 
-void Game::GenerateFood() {
+void Game::PlaceFood() {
   int x, y;
   while (true) {
     x = random_w(engine);
     y = random_h(engine);
-    // Đảm bảo vị trí thức ăn không nằm trên cơ thể rắn
+    // Check that the location is not occupied by a snake item before placing food.
     if (!snake.SnakeCell(x, y)) {
       food.x = x;
       food.y = y;
@@ -60,25 +82,34 @@ void Game::GenerateFood() {
 }
 
 void Game::Update() {
-  if (!snake.IsAlive()) return;
+  if (!snake.alive) return;
+
+  // Lock the snake state
+  std::lock_guard<std::mutex> lock(mtx);
+
+  // Save old size and score
+  int old_size = snake.size;
+  int old_score = score;
 
   snake.Update();
 
-  int head_x = static_cast<int>(snake.GetHead().x);
-  int head_y = static_cast<int>(snake.GetHead().y);
+  int new_x = static_cast<int>(snake.head_x);
+  int new_y = static_cast<int>(snake.head_y);
 
-  // Kiểm tra xem đầu rắn có ở vị trí thức ăn không
-  if (food.x == head_x && food.y == head_y) {
+  // Check if there's food over here
+  if (food.x == new_x && food.y == new_y) {
     score++;
-    GenerateFood(); // Đặt thức ăn tại vị trí mới
+    PlaceFood();
+    // Grow snake and increase speed
     snake.GrowBody();
+    snake.speed += 0.02;
+  }
 
-    // Tăng tốc độ khi rắn đạt chiều dài trong khoảng nhất định
-    if (snake.SizeInBounds(25, 35)) {
-        snake.ScaleSpeed(0.95);
-    }
+  // Check if snake state actually changed
+  if (snake.size != old_size || score != old_score) {
+    mtx.unlock();
   }
 }
 
 int Game::GetScore() const { return score; }
-int Game::GetSize() const { return snake.GetSize(); }
+int Game::GetSize() const { return snake.size; }

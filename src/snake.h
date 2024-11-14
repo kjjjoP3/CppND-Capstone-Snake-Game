@@ -38,7 +38,7 @@ public:
   void Update();
 
   void GrowBody();
-  bool SnakeCell(int x, int y);
+  bool SnakeCell(int x, int y) const;
 
   // Overloaded Reset functions
   void Reset() override;

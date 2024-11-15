@@ -9,32 +9,39 @@ Renderer::Renderer(const std::size_t screen_width,
       screen_height(screen_height),
       grid_width(grid_width),
       grid_height(grid_height) {
-  // Initialize SDL
+  // Khởi tạo thư viện SDL
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-    std::cerr << "SDL could not initialize.\n";
-    std::cerr << "SDL_Error: " << SDL_GetError() << "\n";
+    std::cerr << "Không thể khởi tạo SDL.\n";
+    std::cerr << "Lỗi: " << SDL_GetError() << "\n";
+    return;
   }
 
-  // Create Window
-  sdl_window = SDL_CreateWindow("Snake Game", SDL_WINDOWPOS_CENTERED,
+  // Tạo cửa sổ
+  sdl_window = SDL_CreateWindow("Trò chơi Rắn", SDL_WINDOWPOS_CENTERED,
                                 SDL_WINDOWPOS_CENTERED, screen_width,
                                 screen_height, SDL_WINDOW_SHOWN);
 
-  if (nullptr == sdl_window) {
-    std::cerr << "Window could not be created.\n";
-    std::cerr << " SDL_Error: " << SDL_GetError() << "\n";
+  if (!sdl_window) {
+    std::cerr << "Không thể tạo cửa sổ.\n";
+    std::cerr << "Lỗi: " << SDL_GetError() << "\n";
+    return;
   }
 
-  // Create renderer
+  // Tạo bộ dựng
   sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED);
-  if (nullptr == sdl_renderer) {
-    std::cerr << "Renderer could not be created.\n";
-    std::cerr << "SDL_Error: " << SDL_GetError() << "\n";
+  if (!sdl_renderer) {
+    std::cerr << "Không thể tạo bộ dựng.\n";
+    std::cerr << "Lỗi: " << SDL_GetError() << "\n";
   }
 }
 
 Renderer::~Renderer() {
-  SDL_DestroyWindow(sdl_window);
+  if (sdl_renderer) {
+    SDL_DestroyRenderer(sdl_renderer);
+  }
+  if (sdl_window) {
+    SDL_DestroyWindow(sdl_window);
+  }
   SDL_Quit();
 }
 
@@ -43,39 +50,35 @@ void Renderer::Render(Snake const &snake, SDL_Point const &food) {
   block.w = screen_width / grid_width;
   block.h = screen_height / grid_height;
 
-  // Clear screen
-  SDL_SetRenderDrawColor(sdl_renderer, 0x1E, 0x1E, 0x1E, 0xFF);
+  // Làm sạch màn hình
+  SDL_SetRenderDrawColor(sdl_renderer, 30, 30, 30, 255);
   SDL_RenderClear(sdl_renderer);
 
-  // Render food
-  SDL_SetRenderDrawColor(sdl_renderer, 0xFF, 0xCC, 0x00, 0xFF);
+  // Hiển thị thức ăn
+  SDL_SetRenderDrawColor(sdl_renderer, 255, 204, 0, 255);
   block.x = food.x * block.w;
   block.y = food.y * block.h;
   SDL_RenderFillRect(sdl_renderer, &block);
 
-  // Render snake's body
-  SDL_SetRenderDrawColor(sdl_renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-  for (SDL_Point const &point : snake.body) {
-    block.x = point.x * block.w;
-    block.y = point.y * block.h;
+  // Hiển thị thân rắn
+  SDL_SetRenderDrawColor(sdl_renderer, 255, 255, 255, 255);
+  for (SDL_Point const &segment : snake.body) {
+    block.x = segment.x * block.w;
+    block.y = segment.y * block.h;
     SDL_RenderFillRect(sdl_renderer, &block);
   }
 
-  // Render snake's head
+  // Hiển thị đầu rắn
   block.x = static_cast<int>(snake.head_x) * block.w;
   block.y = static_cast<int>(snake.head_y) * block.h;
-  if (snake.alive) {
-    SDL_SetRenderDrawColor(sdl_renderer, 0x00, 0x7A, 0xCC, 0xFF);
-  } else {
-    SDL_SetRenderDrawColor(sdl_renderer, 0xFF, 0x00, 0x00, 0xFF);
-  }
+  SDL_SetRenderDrawColor(sdl_renderer, snake.alive ? 0 : 255, snake.alive ? 122 : 0, snake.alive ? 204 : 0, 255);
   SDL_RenderFillRect(sdl_renderer, &block);
 
-  // Update Screen
+  // Cập nhật màn hình
   SDL_RenderPresent(sdl_renderer);
 }
 
 void Renderer::UpdateWindowTitle(int score, int fps) {
-  std::string title{"Snake Score: " + std::to_string(score) + " FPS: " + std::to_string(fps)};
+  std::string title = "Điểm: " + std::to_string(score) + " FPS: " + std::to_string(fps);
   SDL_SetWindowTitle(sdl_window, title.c_str());
 }

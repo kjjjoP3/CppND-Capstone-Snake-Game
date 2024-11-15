@@ -8,9 +8,9 @@ void Snake::Update() {
     SDL_Point current_cell{static_cast<int>(head_x), static_cast<int>(head_y)};
 
     // Kiểm tra nếu vị trí đầu rắn đã thay đổi
-    if (current_cell != previous_cell) {
-        UpdateBody(current_cell, previous_cell);
-    }
+if (current_cell.x != prev_cell.x || current_cell.y != prev_cell.y) {
+    UpdateBody(current_cell, prev_cell);
+  }
 }
 
 void Snake::UpdateHead() {

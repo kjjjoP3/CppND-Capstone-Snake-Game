@@ -1,27 +1,22 @@
 #include "game.h"
 #include <iostream>
-#include <algorithm>
 #include <thread>
+#include <future>
 #include "SDL.h"
-#include <random>
-#include <chrono>
 
 Game::Game(std::size_t grid_width, std::size_t grid_height)
     : snake(grid_width, grid_height),
       engine(dev()),
       random_w(0, static_cast<int>(grid_width - 1)),
-      random_h(0, static_cast<int>(grid_height - 1))
+      random_h(0, static_cast<int>(grid_height - 1)),
+      scoreManager("highscore.txt"),
+      exit_future(exit_signal.get_future().share()) 
 {
   PlaceFood();
 }
 
-bool Game::IsGameOver() const
-{
-  return !snake.alive;
-}
-
-void Game::Run(Controller &controller, Renderer &renderer, std::size_t target_frame_duration)
-{
+void Game::Run(Controller const &controller, Renderer &renderer,
+               std::size_t target_frame_duration) {
   Uint32 title_timestamp = SDL_GetTicks();
   Uint32 frame_start;
   Uint32 frame_end;
@@ -29,143 +24,90 @@ void Game::Run(Controller &controller, Renderer &renderer, std::size_t target_fr
   int frame_count = 0;
   bool running = true;
 
-  while (running)
-  {
+  update_thread = std::thread([&]() {
+      while (exit_future.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout) {
+          Update();
+          std::this_thread::sleep_for(std::chrono::milliseconds(target_frame_duration));
+      }
+  });
+
+  while (running) {
     frame_start = SDL_GetTicks();
 
-    // Xử lý đầu vào, cập nhật và vẽ game
+    // Input, Render - main game loop
     controller.HandleInput(running, snake);
-
-    if (IsGameOver())
-    {
-      renderer.RenderGameOverMessage();
-      if (renderer.IsRestartRequested())
-      {
-        Restart();
-        renderer.ResetGameOverMessage();
-      }
-      else
-      {
-        running = false;
-        break;
-      }
-    }
-    else
-    {
-      Update();
-      renderer.Render(snake, food, bonus_food);
-    }
+    renderer.Render(snake, food);
 
     frame_end = SDL_GetTicks();
+
+    // Keep track of frame duration
     frame_count++;
     frame_duration = frame_end - frame_start;
 
-    if (frame_end - title_timestamp >= 1000)
-    {
+    // Update window title every second
+    if (frame_end - title_timestamp >= 1000) {
       renderer.UpdateWindowTitle(score, frame_count);
       frame_count = 0;
       title_timestamp = frame_end;
     }
 
-    if (frame_duration < target_frame_duration)
-    {
+    // Delay to maintain target frame rate
+    if (frame_duration < target_frame_duration) {
       SDL_Delay(target_frame_duration - frame_duration);
     }
   }
+
+  // Stop the update thread
+  exit_signal.set_value();
+  if (update_thread.joinable()) {
+    update_thread.join();
+  }
+
+  // Save high score when game ends
+  scoreManager.saveHighScore(score);
 }
 
-void Game::PlaceFood()
-{
+void Game::PlaceFood() {
   int x, y;
-  do
-  {
+  while (true) {
     x = random_w(engine);
     y = random_h(engine);
-  } while (snake.SnakeCell(x, y));
-
-  food.x = x;
-  food.y = y;
+    // Check that the location is not occupied by a snake item before placing food.
+    if (!snake.SnakeCell(x, y)) {
+      food.x = x;
+      food.y = y;
+      return;
+    }
+  }
 }
 
-void Game::PlaceBonusFood()
-{
-  int x, y;
-  do
-  {
-    x = random_w(engine);
-    y = random_h(engine);
-  } while (snake.SnakeCell(x, y) || (x == food.x && y == food.y));
+void Game::Update() {
+  if (!snake.alive) return;
 
-  bonus_food.x = x;
-  bonus_food.y = y;
-}
+  // Lock the snake state
+  std::lock_guard<std::mutex> lock(mtx);
 
-void Game::Restart()
-{
-  snake.Reset();
-  score = 0;
-  is_bonus_food_active = false;
-  bonus_food = {-1, -1};
-}
+  // Save old size and score
+  int old_size = snake.size;
+  int old_score = score;
 
-void Game::Update()
-{
   snake.Update();
+
   int new_x = static_cast<int>(snake.head_x);
   int new_y = static_cast<int>(snake.head_y);
 
-  if (food.x == new_x && food.y == new_y)
-  {
+  // Check if there's food over here
+  if (food.x == new_x && food.y == new_y) {
     score++;
     PlaceFood();
+    // Grow snake and increase speed
     snake.GrowBody();
     snake.speed += 0.02;
-    already_appeared = false;
   }
 
-  if (score > 0 && score % 10 == 0 && !already_appeared)
-  {
-    if (!is_bonus_food_active)
-    {
-      PlaceBonusFood();
-      is_bonus_food_active = true;
-      bonusFoodThread = std::thread(&Game::BonusFoodTimer, this);
-      bonusFoodThread.detach();
-      already_appeared = true;
-    }
-  }
-
-  if (bonus_food.x == new_x && bonus_food.y == new_y)
-  {
-    score += 3;
-    snake.speed = std::max(0.1f, snake.speed - 0.05f);
-    bonus_food = {-1, -1};
-    {
-      std::lock_guard<std::mutex> lock(mutex);
-      is_bonus_food_active = false;
-    }
-    cv.notify_one();
-  }
-}
-
-void Game::BonusFoodTimer()
-{
-  const int bonusDuration = 10;
-  auto startTime = std::chrono::high_resolution_clock::now();
-  std::unique_lock<std::mutex> lock(mutex);
-
-  while (is_bonus_food_active)
-  {
-    lock.unlock();
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    if (std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime).count() >= bonusDuration)
-    {
-      is_bonus_food_active = false;
-      bonus_food = {-1, -1};
-      break;
-    }
-    lock.lock();
-    cv.wait_for(lock, std::chrono::milliseconds(1000));
+  // Check if snake state actually changed
+  if (snake.size != old_size || score != old_score) {
+    mtx.unlock();
   }
 }
 

@@ -18,21 +18,19 @@ void ScoreManager::saveHighScore(int score) {
 }
 
 void ScoreManager::loadHighScore() {
-    std::ifstream file(filename);
-    if (file.is_open()) {
-        file >> highScore;
-        file.close();
+    std::ifstream inputFile(filename, std::ios::in);
+    if (inputFile) {
+        inputFile >> highScore;
     } else {
-        highScore = 0;
+        highScore = 0;  // Đặt giá trị mặc định nếu không thể đọc tệp
     }
 }
 
 void ScoreManager::writeHighScore() {
-    std::ofstream file(filename);
-    if (file.is_open()) {
-        file << highScore;
-        file.close();
+    std::ofstream outputFile(filename, std::ios::out);
+    if (outputFile) {
+        outputFile << highScore;
     } else {
-        std::cerr << "Unable to open file for writing high score.\n";
+        std::cerr << "Không thể mở tệp để ghi điểm cao.\n";
     }
 }

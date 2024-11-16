@@ -121,39 +121,37 @@ The player can increase the snake's speed by pressing the p key.
 File: src/controller.cpp
 
 Rubric Points Addressed
-README
-A README with installation and usage instructions is included.
-New features and expected behaviors of the program are outlined.
-Compiling and Running the Program
-The project builds and runs without errors.
-Loops, Functions, I/O
-Control Structures and Functions: A variety of control structures and functions are used.
-Files: src/game.cpp, src/snake.cpp
-File I/O: Reads and writes data to a file.
-File: src/scoremanager.cpp
-User Input: Captures and handles user input.
-File: src/controller.cpp
-Object-Oriented Programming
-Classes: The project uses classes that encapsulate data and functions.
-Files: src/snake.h, src/game.h
-Access Specifiers: All class data members have appropriate access specifiers (public, protected, private).
-Files: src/snake.h, src/game.h
-Member Initialization Lists: Member initialization lists are used in constructors.
-File: src/game.cpp
-Function Overloading: Functions are overloaded with different parameters.
-File: src/snake.cpp
-Memory Management
-References: References are used in function declarations.
-Files: src/game.h, src/renderer.h
-Destructors: Proper destructors are implemented.
-Files: src/renderer.cpp, src/scoremanager.cpp
-RAII: RAII principles are used where applicable.
-Files: src/game.cpp, src/snake.cpp
-Concurrency
-Multithreading: Multithreading is used in the project.
-File: src/game.cpp
-Mutex: Mutex is used to protect shared data.
-File: src/game.cpp
-References
-Code references from StackOverflow posts and official SDL documentation.
-Code Reference: Functions Renderer::RenderBlock and Renderer::RenderBody take parameters by reference (renderer.h, lines 16-21). The getter for Snake::body also returns a const reference.
+
+*Compiling and Running the Program
+- The project builds and runs without errors.
+*Loops, Functions, I/O
+- Control Structures and Functions: A variety of control structures and functions are used.
+     Files: src/game.cpp, src/snake.cpp
+- File I/O: Reads and writes data to a file.
+     File: src/scoremanager.cpp
+- User Input: Captures and handles user input.
+     File: src/controller.cpp
+*Object-Oriented Programming
+- Classes: The project uses classes that encapsulate data and functions.
+     Files: src/snake.h, src/game.h
+- Access Specifiers: All class data members have appropriate access specifiers (public, protected, private).
+     Files: src/snake.h, src/game.h
+- Member Initialization Lists: Member initialization lists are used in constructors.
+     File: src/game.cpp
+- Function Overloading: Functions are overloaded with different parameters.
+     File: src/snake.cpp
+*Memory Management
+- References: References are used in function declarations.
+     Files: src/game.h, src/renderer.h
+- Destructors: Proper destructors are implemented.
+     Files: src/renderer.cpp, src/scoremanager.cpp
+- RAII: RAII principles are used where applicable.
+     Files: src/game.cpp, src/snake.cpp
+*Concurrency
+- Multithreading: Multithreading is used in the project.
+     File: src/game.cpp
+- Mutex: Mutex is used to protect shared data.
+     File: src/game.cpp
+*References
+- Code references from StackOverflow posts and official SDL documentation.
+- Code Reference: Functions Renderer::RenderBlock and Renderer::RenderBody take parameters by reference (renderer.h, lines 16-21). The getter for Snake::body also returns a const reference.

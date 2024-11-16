@@ -106,35 +106,54 @@ Run the game:
 bash
 Copy code
 ./SnakeGame
-New Features and Expected Behavior
-Boundary Walls: The game does not wrap around; instead, walls act as barriers. Colliding with a wall requires a turn or ends the game if a turn is not possible.
-Automatic Turning: The snake will turn left or right as needed to avoid obstacles when possible.
-Dynamic Speed: The snake's speed decreases slightly after reaching a length of 25 cells, giving the player better control as the snake grows longer.
-Enhanced Visuals: Clear outlining improves segment visibility, helping players track the snake's path more easily.
-Rubric Points Addressed
-The following rubric items are implemented in this project. Each item is linked to specific code sections, including file names and line numbers where relevant.
 
-1. Functions and Control Structures
-Requirement: Demonstrate an understanding of C++ functions and control structures.
-Code Reference: See renderer.cpp at lines 78, 94, 110, and 150. Functions were added, including RenderBody, which iterates backward over a std::vector.
-2. User Input Processing
-Requirement: Accept and process user input.
-Code Reference: snake.cpp, line 195 in the new ChangeDirection function. Input handling has been expanded beyond simple directional changes.
-3. Object-Oriented Programming (OOP)
-Requirement: Use OOP techniques.
-Code Reference: New Point class introduced. In snake.h, lines 30-40, data members in the Snake class are now private with public getters/setters.
-4. Appropriate Access Specifiers
-Requirement: Use appropriate access specifiers.
-Code Reference: snake.h, lines 30-40. All data members in Snake are private, aligning with encapsulation principles.
-5. Member Initialization Lists
-Requirement: Utilize member initialization lists.
-Code Reference: Used in class constructors throughout the project.
-6. Encapsulation
-Requirement: Encapsulate behavior within classes.
-Code Reference: See Snake class in snake.h. All data members are private, providing encapsulation.
-7. Function Overloading
-Requirement: Overload functions to handle different parameters.
-Code Reference: renderer.cpp, lines 78-100, where Renderer::Direction is overloaded.
-8. References in Function Declarations
-Requirement: Use references in function declarations.
+New Features
+1. Auto-Save High Score
+The game automatically saves the highest score achieved and displays it upon restart.
+File: src/scoremanager.cpp
+
+2. Dynamic Snake Speed Increase
+The snake's speed increases each time it eats food.
+File: src/snake.cpp
+
+3. User-Controlled Speed Boost
+The player can increase the snake's speed by pressing the p key.
+File: src/controller.cpp
+
+Rubric Points Addressed
+README
+A README with installation and usage instructions is included.
+New features and expected behaviors of the program are outlined.
+Compiling and Running the Program
+The project builds and runs without errors.
+Loops, Functions, I/O
+Control Structures and Functions: A variety of control structures and functions are used.
+Files: src/game.cpp, src/snake.cpp
+File I/O: Reads and writes data to a file.
+File: src/scoremanager.cpp
+User Input: Captures and handles user input.
+File: src/controller.cpp
+Object-Oriented Programming
+Classes: The project uses classes that encapsulate data and functions.
+Files: src/snake.h, src/game.h
+Access Specifiers: All class data members have appropriate access specifiers (public, protected, private).
+Files: src/snake.h, src/game.h
+Member Initialization Lists: Member initialization lists are used in constructors.
+File: src/game.cpp
+Function Overloading: Functions are overloaded with different parameters.
+File: src/snake.cpp
+Memory Management
+References: References are used in function declarations.
+Files: src/game.h, src/renderer.h
+Destructors: Proper destructors are implemented.
+Files: src/renderer.cpp, src/scoremanager.cpp
+RAII: RAII principles are used where applicable.
+Files: src/game.cpp, src/snake.cpp
+Concurrency
+Multithreading: Multithreading is used in the project.
+File: src/game.cpp
+Mutex: Mutex is used to protect shared data.
+File: src/game.cpp
+References
+Code references from StackOverflow posts and official SDL documentation.
 Code Reference: Functions Renderer::RenderBlock and Renderer::RenderBody take parameters by reference (renderer.h, lines 16-21). The getter for Snake::body also returns a const reference.
